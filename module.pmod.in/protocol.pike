@@ -11,7 +11,7 @@ Frame decode_frame(string data)
   Frame f;
 
   data = utf8_to_string(data);
-
+werror("data: %O\n\n", data);
   if(catch([command, body] = array_sscanf(data, "%s\n%s\000")))
     error("Error decoding Frame, invalid data format.\n");
 
@@ -91,6 +91,7 @@ class Frame
 
   mixed cast(string type)
   {
+werror("frame: %O\n\n", render_frame());
     if(type == "string")
       return render_frame();
     else

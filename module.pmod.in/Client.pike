@@ -1,5 +1,7 @@
 //! this is a Stomp client.
 
+inherit .protocol;
+
 static Stdio.File conn;
 
 static string user="";
@@ -22,6 +24,8 @@ void connect(string host, int port)
   if(!c->connect(host, port))
     error("Stomp.Client: unable to connect.\n");
 
+  conn = c;
+
   Frame f = Frame();
  
   f->set_command("CONNECT");
@@ -34,6 +38,9 @@ void connect(string host, int port)
   send_frame(f);
   f = receive_frame();
 
+  write(f->get_command() + "\n");
+  write(f->get_header("session") + "\n");
+
   return;
 }
 
@@ -44,7 +51,7 @@ static void send_frame(Frame f)
 
 static Frame receive_frame()
 {
-  string d = conn->read();
+  string d = conn->read(10000, 1);
 
   if(!d) error("no data received!\n");
 
