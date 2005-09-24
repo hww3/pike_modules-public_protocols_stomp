@@ -3,17 +3,37 @@
 //! http://stomp.codehaus.org
 
 
-Frame decode_frame(string data)
+array(Frame|string) decode_frame(string data)
 {
   string command ="";
   mapping headers = ([]);
-  string body = "";
+  string body, rest = "";
   Frame f;
-
+  array z;
+  
   data = utf8_to_string(data);
-werror("data: %O\n\n", data);
-  if(catch([command, body] = array_sscanf(data, "%s\n%s\000")))
+//werror("data: %O\n\n", data);
+
+  if(catch(z = array_sscanf(data, "%s\n%s\000%s")))
     error("Error decoding Frame, invalid data format.\n");
+
+  if(sizeof(z) == 3)
+  {
+    command = z[0];
+    body = z[1];
+    rest = z[2];
+  }
+
+  else if(sizeof(z) ==2)
+  {
+    command = z[0];
+    body = z[1];
+  }
+
+  else
+  {
+    command = z[0];
+  }
 
   f = Frame();
 
@@ -42,10 +62,14 @@ werror("data: %O\n\n", data);
     }
 
   } while(still_looking == 1);  
-  
-  f->set_body(body);
 
-  return f;
+  if(body)
+    f->set_body(body);
+
+  if(rest[0..0] == "\n")
+    rest = rest[1..];
+
+  return ({f, rest});
 }
 
 
@@ -91,7 +115,7 @@ class Frame
 
   mixed cast(string type)
   {
-werror("frame: %O\n\n", render_frame());
+//werror("frame: %O\n\n", render_frame());
     if(type == "string")
       return render_frame();
     else
