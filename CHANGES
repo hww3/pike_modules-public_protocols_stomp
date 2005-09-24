@@ -1,0 +1,5 @@
+Version 1.0
+
+Initial version of the Stomp implimentation for Pike. This module supports 
+Sending, Subscription, Receipts and Transations. Currently, ACKs are not 
+yet supported.
