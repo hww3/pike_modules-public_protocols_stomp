@@ -20,6 +20,11 @@ void set_auth(string u, string p)
   pass = p;
 }
 
+string get_session()
+{
+  return session;
+}
+
 void connect(string host, int port)
 {
   Stdio.File c = Stdio.File();
@@ -51,9 +56,194 @@ void connect(string host, int port)
   return;
 }
 
-static void send_frame(Frame f)
+int begin(int(0..1)|void receipt)
 {
-  conn->write((string)f);
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("BEGIN");
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+}
+
+int commit(int(0..1)|void receipt)
+{
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("COMMIT");
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+}
+
+int abort(int(0..1)|void receipt)
+{
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("ABORT");
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+
+}
+
+int subscribe(string destination, int(0..1)|void receipt)
+{
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("SUBSCRIBE");
+
+  f->set_header("destination", destination);
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+
+}
+
+int unsubscribe(string destination, int(0..1)|void receipt)
+{
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("UNSUBSCRIBE");
+
+  f->set_header("destination", destination);
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+
+}
+
+int send(string destination, string message, int(0..1)|void receipt)
+{
+  string messageid;
+  Frame f = Frame();
+
+  f->set_command("SEND");
+
+  f->set_header("destination", destination);
+
+  if(receipt)
+  {
+    messageid = "message-" + random(10000000);
+    f->set_header("receipt", messageid);
+  }
+
+  f->set_body(message);
+
+  send_frame(f);
+  
+  if(receipt)
+  {
+    f = receive_frame();
+    if(f->get_command() != "RECEIPT")
+      error("out of sync response, expected RECEIPT, got %s\n", f->get_command());
+    if(f->get_header("receipt-id") != messageid)
+      error("incorrect receipt id received.\n");
+
+    return 1;
+  }
+
+  return 1;
+}
+
+Frame await_message()
+{
+  return receive_frame();
 }
 
 static Frame receive_frame()
@@ -66,3 +256,10 @@ static Frame receive_frame()
 
   return f;
 }
+
+static void send_frame(Frame f)
+{
+  conn->write((string)f);
+}
+
+
