@@ -4,8 +4,10 @@ inherit .protocol;
 
 static Stdio.File conn;
 
-static string user="";
-static string pass="";
+static string user = "";
+static string pass = "";
+
+static string session;
 
 void create()
 {
@@ -38,8 +40,13 @@ void connect(string host, int port)
   send_frame(f);
   f = receive_frame();
 
-  write(f->get_command() + "\n");
-  write(f->get_header("session") + "\n");
+  if(f->get_command() != "CONNECTED")
+    error("Unexpected response from server, got %s\n", f->get_command());
+
+  session = f->get_header("session");
+
+  if(!session) 
+    error("Missing session id from response.\n");
 
   return;
 }
