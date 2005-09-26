@@ -9,8 +9,6 @@ static string pass = "";
 
 static string session;
 
-static string buffer="";
-
 void create()
 {
   
@@ -252,7 +250,6 @@ static Frame receive_frame()
 {
   string d;
   Frame f;
-  //werror("buffer: %O\n", buffer);
   d = (sizeof(buffer)?buffer: conn->read(10000, 1));
 
   if(!d) error("no data received!\n");

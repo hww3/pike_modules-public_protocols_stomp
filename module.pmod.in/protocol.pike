@@ -2,6 +2,94 @@
 //! for more information, see the stomp hompage
 //! http://stomp.codehaus.org
 
+constant STREAM_WAITING_FRAME = 0;
+constant STREAM_HAVE_COMMAND = 1;
+constant STREAM_HAVE_HEADERS = 2;
+constant STREAM_HAVE_BODY = 3;
+
+string buffer="";
+int streaming_decode_state = STREAM_WAITING_FRAME;
+function frame_handler;
+
+mapping stream_decode_storage = ([]);
+
+void streaming_decode()
+{
+  Frame frame;
+
+  do
+  { 
+    frame = low_streaming_decode();
+    if(frame_handler)
+      frame_handler(frame);
+  }
+  while(frame);
+}
+
+Frame low_streaming_decode()
+{
+  int stop;
+
+  do
+  {
+    if(!buffer || !strlen(buffer))
+      stop = 1;
+
+    switch(streaming_decode_state)
+    {
+      case 0: // STREAM_WAITING_FRAME
+        // we first need to get the command.
+        int num;
+        num =  sscanf(buffer, "%s\n%s", streaming_decode_storage->command, buffer)
+        if(num == 0)
+          stop = 1;
+        else streaming_decode_state = STREAM_HAVE_COMMAND;
+        break;
+      case 1: // STREAM_HAVE_COMMAND
+        // ok, we need to get the whole header block before we do anything.
+        int num;
+        num =  sscanf(buffer, "%s\n\n%s", streaming_decode_storage->headerblock, buffer)
+        if(num == 0)
+          stop = 1;
+        else
+        {
+          streaming_decode_storage->headers = ([]);
+          string h,v;
+
+          foreach(streaming_decode_storage->headerblock / "\n";; string header)
+            streaming_decode_storage->headers[h] = v;
+
+          streaming_decode_state = STREAM_HAVE_HEADERS;
+        }
+        break;
+      case 2: // STREAM_HAVE_HEADERS
+        // ok, now we should be looking for the body.
+        int num;
+        num =  sscanf(buffer, "%s\000%s", streaming_decode_storage->body, buffer)
+        if(num == 0)
+          stop = 1;
+        else
+        {
+          if(has_prefix(buffer, "\n"))
+            buffer = buffer[1..];
+          streaming_decode_state = STREAM_HAVE_BODY;
+        }
+        break;
+      case 3: // STREAM_HAVE_BODY
+        Frame f = Frame();
+        f->set_command(streaming_decode_storage->command);
+        f->set_body(streaming_decode_storage->body);
+        streaming_decode_state = STREAM_WAITING_FRAME;
+        return f;
+        break;
+      default:
+        error("Invalid decode state!\n");
+    }
+  }  while(!stop);
+
+  return 0;
+}
+
 
 array(Frame|string) decode_frame(string data)
 {
