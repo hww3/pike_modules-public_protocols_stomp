@@ -11,16 +11,22 @@ string buffer="";
 int streaming_decode_state = STREAM_WAITING_FRAME;
 function frame_handler;
 
-mapping stream_decode_storage = ([]);
+mapping streaming_decode_storage = ([]);
 
-void streaming_decode()
+void streaming_decode(int handle, string data)
 {
   Frame frame;
+
+  if(!data) return;
+
+  //werror("got data: %O\n", data);
+
+  buffer += data;
 
   do
   { 
     frame = low_streaming_decode();
-    if(frame_handler)
+    if(frame && frame_handler)
       frame_handler(frame);
   }
   while(frame);
@@ -32,23 +38,23 @@ Frame low_streaming_decode()
 
   do
   {
+    //werror("buffer: %O \n", buffer);
     if(!buffer || !strlen(buffer))
       stop = 1;
 
+    int num;
     switch(streaming_decode_state)
     {
       case 0: // STREAM_WAITING_FRAME
         // we first need to get the command.
-        int num;
-        num =  sscanf(buffer, "%s\n%s", streaming_decode_storage->command, buffer)
+        num =  sscanf(buffer, "%s\n%s", streaming_decode_storage->command, buffer);
         if(num == 0)
           stop = 1;
         else streaming_decode_state = STREAM_HAVE_COMMAND;
         break;
       case 1: // STREAM_HAVE_COMMAND
         // ok, we need to get the whole header block before we do anything.
-        int num;
-        num =  sscanf(buffer, "%s\n\n%s", streaming_decode_storage->headerblock, buffer)
+        num =  sscanf(buffer, "%s\n\n%s", streaming_decode_storage->headerblock, buffer);
         if(num == 0)
           stop = 1;
         else
@@ -57,15 +63,31 @@ Frame low_streaming_decode()
           string h,v;
 
           foreach(streaming_decode_storage->headerblock / "\n";; string header)
-            streaming_decode_storage->headers[h] = v;
+          {
+            //werror("decode header " + header + "\n");
+            int l = search(header, ":");
+            if(l > -1)
+            { 
+              h = String.trim_whites(header[0..(l-1)]);
+              v = String.trim_whites(header[(l+1)..]);
+            }
+            else error("Stom.protocol: invalid header received.\n");
 
+            streaming_decode_storage->headers[h] = v;
+          }
           streaming_decode_state = STREAM_HAVE_HEADERS;
         }
         break;
       case 2: // STREAM_HAVE_HEADERS
         // ok, now we should be looking for the body.
-        int num;
-        num =  sscanf(buffer, "%s\000%s", streaming_decode_storage->body, buffer)
+        // if we have a content-length header, we look for that much data.
+        string searchlen = "";
+
+        // is it safe to assume that content-length is always an integer?
+        if(streaming_decode_storage->headers["content-length"])
+          searchlen = streaming_decode_storage->headers["content-length"];
+
+        num =  sscanf(buffer, "%s" + searchlen + "\000%s", streaming_decode_storage->body, buffer);
         if(num == 0)
           stop = 1;
         else
@@ -76,9 +98,11 @@ Frame low_streaming_decode()
         }
         break;
       case 3: // STREAM_HAVE_BODY
+        //werror("have frame body: %O\n", streaming_decode_storage->body);
         Frame f = Frame();
         f->set_command(streaming_decode_storage->command);
         f->set_body(streaming_decode_storage->body);
+        f->set_headers(streaming_decode_storage->headers);
         streaming_decode_state = STREAM_WAITING_FRAME;
         return f;
         break;
@@ -191,6 +215,11 @@ class Frame
     return body;
   }
 
+  mapping get_headers()
+  {
+    return headers + ([]);
+  }
+
   string get_header(string h)
   {
     return headers[h];
@@ -199,6 +228,11 @@ class Frame
   void set_header(string h, string v)
   {
     headers[h] = v;
+  }
+
+  void set_headers(mapping h)
+  {
+    headers = h;
   }
 
   mixed cast(string type)
@@ -216,8 +250,14 @@ class Frame
     string f = "";
 
     f += command + "\n";
+
+    if(body) headers["content-length"] = (string)(sizeof(body));
+
+werror("render_frame(): %O %O\n", headers, body);
+
     foreach(headers; string h; string v)
       f += string_to_utf8(h) + ":" + string_to_utf8(v) + "\n";
+
 
     f += "\n";
 
@@ -227,8 +267,6 @@ class Frame
 
 
     return f;
-  }
-
-  
+  }  
 
 }
