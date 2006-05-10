@@ -1,3 +1,12 @@
+Version 1.1
+
+- Adds transaction support (official named transactions)
+- Adds binary message support
+- Runs in asyncronous mode (subscription delivery occurs via a callback)
+- Adds acknowledgements
+- Adds message header support in sent messages
+- Verified against ActiveMQ 4.0 RC2
+
 Version 1.0
 
 Initial version of the Stomp implimentation for Pike. This module supports 
