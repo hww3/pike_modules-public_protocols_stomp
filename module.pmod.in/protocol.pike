@@ -185,56 +185,69 @@ array(Frame|string) decode_frame(string data)
 }
 
 
+//! This is a "message" received from a STOMP server.
+//! If the frame is of type "MESSAGE", then it is a Queue or 
+//! Topic message being delivered.
 class Frame
 {
   static string command = "";
   static mapping headers = ([]);
   static string body = "";
-
-  void create()
+ 
+  //!
+  static void create()
   {
   }
 
+  //!
   void set_command(string c)
   {
     command = c;
   }
-   
+
+  //!   
   string get_command()
   {
     return command;
   }
 
+  //!
   void set_body(string b)
   {
     body = b;
   }
 
+  //!
   string get_body()
   {
     return body;
   }
 
+  //!
   mapping get_headers()
   {
     return headers + ([]);
   }
 
+  //!
   string get_header(string h)
   {
     return headers[h];
   }
 
+  //!
   void set_header(string h, string v)
   {
     headers[h] = v;
   }
 
+  //!
   void set_headers(mapping h)
   {
     headers = h;
   }
 
+  //!
   mixed cast(string type)
   {
 //werror("frame: %O\n\n", render_frame());
