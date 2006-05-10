@@ -19,22 +19,26 @@ void set_background()
 }
 
 
+//!
 void create()
 {
   frame_handler = client_frame_handler;  
 }
 
+//!
 void set_auth(string u, string p)
 {
   user = u;
   pass = p;
 }
 
+//!
 string get_session()
 {
   return session;
 }
 
+//!
 void connect(string host, int port)
 {
   Stdio.File c = Stdio.File();
@@ -70,6 +74,9 @@ void connect(string host, int port)
   return;
 }
 
+//!  begin a transaction.
+//!  @returns
+//!   the transaction identifier string
 string begin(int(0..1)|void receipt)
 {
   string messageid;
@@ -94,6 +101,11 @@ string begin(int(0..1)|void receipt)
 }
 
 
+//! commit a transaction
+//!  @param txid
+//!     the transaction identifier of the transaction to commit.
+//!  @param receipt
+//!     should we await confirmation of this command from the server?
 int commit(string txid, int(0..1)|void receipt)
 {
   string messageid;
@@ -118,6 +130,11 @@ int commit(string txid, int(0..1)|void receipt)
   return 1;
 }
 
+//! abort a transaction, rolling back any messages
+//! @param txid
+//!  the transaction identifier of the transaction to abort.
+//!  @param receipt
+//!     should we await confirmation of this command from the server?
 int abort(string txid, int(0..1)|void receipt)
 {
   string messageid;
@@ -144,6 +161,15 @@ int abort(string txid, int(0..1)|void receipt)
 
 }
 
+//! subscribe to a topic or queue
+//!  @param callback
+//!   a function that takes receives a Frame object for each message 
+//!   delivered and returns one to acknowledge or zero to refuse receipt 
+//!   of the message
+//!  @param acknowledge
+//!    should we require recieved messages to be acknowledged?
+//!  @param receipt
+//!     should we await confirmation of this command from the server?
 int subscribe(string destination, function callback, int(0..1)|void acknowledge, int(0..1)|void receipt)
 {
   string messageid;
@@ -180,6 +206,11 @@ int subscribe(string destination, function callback, int(0..1)|void acknowledge,
   return 1;
 }
 
+//!  unsubscribe from a topic or queue.
+//!  @param destination
+//!     the queue or topic we wish to unsubscribe from.
+//!  @param receipt
+//!     should we await confirmation of this command from the server?
 int unsubscribe(string destination, int(0..1)|void receipt)
 {
   string messageid;
@@ -205,10 +236,25 @@ int unsubscribe(string destination, int(0..1)|void receipt)
   return 1;
 }
 
-int send(string destination, string message, string|void txid, int(0..1)|void receipt)
+//! send a message to a queue or topic
+//!
+//! @param destination
+//!     the name of the topic or queue to send the message to.
+//! @param message
+//!     the contents of the message to be sent
+//! @param headers
+//!     a list of headers we wish to include in the message
+//! @param txid
+//!     transaction identifier of the transaction we wish to associate
+//!     this message with.
+//!  @param receipt
+//!     should we await confirmation of this command from the server?
+int send(string destination, string message, mapping|void headers, string|void txid, int(0..1)|void receipt)
 {
   string messageid;
   Frame f = Frame();
+
+  if(headers) f->set_headers(headers);
 
   if(txid)
     f->set_header("transaction", txid);
@@ -297,5 +343,4 @@ void client_frame_handler(Frame f)
     }
   }
   
-
 }
