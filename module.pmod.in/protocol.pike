@@ -253,7 +253,7 @@ class Frame
 
     if(body) headers["content-length"] = (string)(sizeof(body));
 
-werror("render_frame(): %O %O\n", headers, body);
+// werror("render_frame(): %O %O\n", headers, body);
 
     foreach(headers; string h; string v)
       f += string_to_utf8(h) + ":" + string_to_utf8(v) + "\n";
