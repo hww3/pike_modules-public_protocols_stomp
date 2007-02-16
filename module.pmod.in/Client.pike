@@ -2,6 +2,7 @@
 
 inherit .protocol;
 
+string broker_url;
 static Stdio.File conn;
 
 static string user = "";
@@ -18,15 +19,26 @@ void set_background()
   conn->set_nonblocking_keep_callbacks();
 }
 
-
 //!
-void create()
+void create(string broker_url)
 {
+  Standards.URI url;
   frame_handler = client_frame_handler;  
+  url = Standards.URI(broker_url);
+
+  if(url->scheme != "stomp")
+  {
+    throw(Error.Generic("expected a stomp url; got " + url->scheme + ".\n"));
+  }  
+
+  if(url->user)
+    set_auth(url->user, url->password);
+
+  connect(url->host, url->port||61613);
 }
 
 //!
-void set_auth(string u, string p)
+static void set_auth(string u, string p)
 {
   user = u;
   pass = p;
@@ -39,12 +51,12 @@ string get_session()
 }
 
 //!
-void connect(string host, int port)
+static void connect(string host, int port)
 {
   Stdio.File c = Stdio.File();
 
-  c->connect(host, port);
-//    error("Stomp.Client: unable to connect.\n");
+  if(!c->connect(host, port))
+    throw(Error.Generic("Public.Protocols.Stomp.Client: unable to connect.\n"));
 
   conn = c;
 

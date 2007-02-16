@@ -1,3 +1,8 @@
+Version 1.2
+- Rationalize Client() to take a stomp url.
+- Better documentation
+- Verified against ActiveMQ 4.2
+
 Version 1.1
 
 - Adds transaction support (official named transactions)
@@ -10,5 +15,4 @@ Version 1.1
 Version 1.0
 
 Initial version of the Stomp implimentation for Pike. This module supports 
-Sending, Subscription, Receipts and Transations. Currently, ACKs are not 
-yet supported.
+Sending, Subscription, Receipts and Transactions. ACKs are not currently supported.
