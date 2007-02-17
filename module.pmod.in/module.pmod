@@ -1,3 +1,3 @@
 constant __author = "Bill Welliver <bill@welliver.org>";
-constant __version = "1.1";
+constant __version = "1.2";
 
