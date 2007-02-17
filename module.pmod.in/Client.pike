@@ -4,37 +4,35 @@ inherit .protocol;
 
 string broker_url;
 static Stdio.File conn;
-
 static string user = "";
 static string pass = "";
 
 static string session;
+static int is_running = 0;
+
+private int backoff_value = 1;
+private int reconnect = 0;
 
 static mapping ack = ([]);
 mapping subscribers = ([]);
+ADT.Queue pending_messages = ADT.Queue();
 
 void set_background()
 {
   conn->set_read_callback(streaming_decode);
+  conn->set_close_callback(stomp_close_callback);
   conn->set_nonblocking_keep_callbacks();
 }
 
 //!
-void create(string broker_url)
+void create(string _broker_url, int(0..1)|void _reconnect)
 {
-  Standards.URI url;
   frame_handler = client_frame_handler;  
-  url = Standards.URI(broker_url);
+  
+  broker_url = _broker_url;
+  reconnect = _reconnect;
 
-  if(url->scheme != "stomp")
-  {
-    throw(Error.Generic("expected a stomp url; got " + url->scheme + ".\n"));
-  }  
-
-  if(url->user)
-    set_auth(url->user, url->password);
-
-  connect(url->host, url->port||61613);
+  connect(broker_url);
 }
 
 //!
@@ -51,9 +49,26 @@ string get_session()
 }
 
 //!
-static void connect(string host, int port)
+static void connect(string broker_url)
 {
+  Standards.URI url;
+  string host;
+  int port;
   Stdio.File c = Stdio.File();
+
+  url = Standards.URI(broker_url);
+ 
+
+  if(url->scheme != "stomp")
+  {
+    throw(Error.Generic("expected a stomp url; got " + url->scheme + ".\n"));
+  }  
+
+  host = url->host;
+  port = url->port || 61613;
+
+  if(url->user)
+    set_auth(url->user, url->password);
 
   if(!c->connect(host, port))
     throw(Error.Generic("Public.Protocols.Stomp.Client: unable to connect.\n"));
@@ -80,6 +95,7 @@ static void connect(string host, int port)
     error("Missing session id from response.\n");  
 
   set_background();
+  is_running = 1;
 
   //werror("client running.\n");
 
@@ -213,7 +229,7 @@ int subscribe(string destination, function callback, int(0..1)|void acknowledge,
   else
     send_frame(f);
 
-  subscribers[destination] = callback;
+  subscribers[destination] = ({callback, acknowledge, receipt});
 
   return 1;
 }
@@ -245,6 +261,8 @@ int unsubscribe(string destination, int(0..1)|void receipt)
   else
     send_frame(f);
 
+  m_delete(subscribers, destination);
+
   return 1;
 }
 
@@ -264,6 +282,13 @@ int unsubscribe(string destination, int(0..1)|void receipt)
 int send(string destination, string message, mapping|void headers, string|void txid, int(0..1)|void receipt)
 {
   string messageid;
+
+  // we just can't accomodate this type of request.
+  if(!is_running && receipt)
+  {
+     throw(Error.Generic("Unable to send message with receipt while broker is unavailable.\n"));
+  }
+
   Frame f = Frame();
 
   if(headers) f->set_headers(headers);
@@ -288,8 +313,12 @@ int send(string destination, string message, mapping|void headers, string|void t
       error("incorrect receipt id received.\n");
   }
   else
-    send_frame(f);
-
+  {
+    if(!is_running)
+      delayed_send_frame(f);
+    else
+      send_frame(f);
+  }
   return 1;
 }
 
@@ -323,6 +352,55 @@ static Frame send_frame_get_response(Frame f)
   
 }
 
+void stomp_close_callback(mixed id)
+{
+  werror("server closed the connection!\n");
+  is_running = 0;
+  if(reconnect)
+  {
+    call_out(reconnect_callout, backoff_value);
+  }
+}
+
+void reconnect_callout()
+{
+   if(catch(connect(broker_url)))
+   {
+      backoff_value += random(backoff_value+1);
+      werror("connection failed, retrying in %d seconds.\n", backoff_value);
+      call_out(reconnect_callout, backoff_value);
+   }
+   else
+   {
+      backoff_value = 1;
+      is_running = 1;
+      call_out(process_pending, 1);
+      call_out(resubscribe_client, 1);
+   }
+}
+
+void resubscribe_client()
+{
+   foreach(subscribers;string dest; array d)
+   {
+     subscribe(dest, d[0], d[1], d[2]);
+   }
+}
+
+static void process_pending()
+{
+   werror("process_pending()\n");
+   while(!pending_messages->is_empty())
+   {
+     send_frame(pending_messages->read());
+   }
+}
+
+static void delayed_send_frame(Frame f)
+{
+  pending_messages->write(f);
+}
+
 static void send_frame(Frame f, int|void block)
 {
   conn->set_blocking_keep_callbacks();
@@ -342,7 +420,7 @@ void client_frame_handler(Frame f)
 
     if(subscribers[dest])
     {
-      int r = subscribers[dest](f);
+      int r = subscribers[dest][0](f);
       if(ack[dest] && r)
       {
         Frame fr = Frame();
