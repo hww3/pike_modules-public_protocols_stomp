@@ -1,5 +1,6 @@
 Version 1.2
 - Rationalize Client() to take a stomp url.
+- Added reconnect mode with a random backoff reconnect period.
 - Better documentation
 - Verified against ActiveMQ 4.2
 
