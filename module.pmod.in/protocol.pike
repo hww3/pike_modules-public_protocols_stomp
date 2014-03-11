@@ -87,7 +87,7 @@ Frame low_streaming_decode()
         if(streaming_decode_storage->headers["content-length"])
           searchlen = streaming_decode_storage->headers["content-length"];
 
-        num =  sscanf(buffer, "%s" + searchlen + "\000%s", streaming_decode_storage->body, buffer);
+        num =  sscanf(buffer, "%" + searchlen + "s\000%s", streaming_decode_storage->body, buffer);
         if(num == 0)
           stop = 1;
         else
