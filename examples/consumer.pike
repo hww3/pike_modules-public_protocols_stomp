@@ -15,8 +15,11 @@ int main(int argc, array(string) argv)
   s->subscribe(argv[3], 
       lambda(Public.Protocols.Stomp.protocol.Frame f){
            werror("got a message: %O\n", f->get_body()); return 1;}
+  );
 
-);
+  // enable nonblocking callback mode.
+  s->set_background();
+
 
   return -1;
 }
