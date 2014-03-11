@@ -17,6 +17,12 @@ static mapping ack = ([]);
 mapping subscribers = ([]);
 ADT.Queue pending_messages = ADT.Queue();
 
+#if constant(Standards.UUID.new_string)
+mixed new_uuid = Standards.UUID.new_string;
+#else
+mixed new_uuid = Standards.UUID.make_version4;
+#endif
+
 void set_background()
 {
   conn->set_read_callback(streaming_decode);
@@ -114,7 +120,7 @@ string begin(int(0..1)|void receipt)
 
   if(receipt)
   { 
-    messageid = "message-" + Standards.UUID.new_string();
+    messageid = "message-" + (string)new_uuid();
     f->set_header("receipt", messageid);
     f = send_frame_get_response(f);
     if(f->get_command() != "RECEIPT")
