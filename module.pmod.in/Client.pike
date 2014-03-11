@@ -23,6 +23,7 @@ mixed new_uuid = Standards.UUID.new_string;
 mixed new_uuid = Standards.UUID.make_version4;
 #endif
 
+//!
 void set_background()
 {
   conn->set_read_callback(streaming_decode);
