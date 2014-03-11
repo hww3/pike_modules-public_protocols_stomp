@@ -31,14 +31,15 @@ void set_background()
 }
 
 //!
-void create(string _broker_url, int(0..1)|void _reconnect)
+void create(string|void _broker_url, int(0..1)|void _reconnect)
 {
   frame_handler = client_frame_handler;  
   
   broker_url = _broker_url;
   reconnect = _reconnect;
 
-  connect(broker_url);
+  if(broker_url)
+    connect(broker_url);
 }
 
 //!
