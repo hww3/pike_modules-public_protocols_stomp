@@ -206,7 +206,7 @@ int abort(string txid, int(0..1)|void receipt)
 //!    should we require recieved messages to be acknowledged?
 //!  @param receipt
 //!     should we await confirmation of this command from the server?
-int subscribe(string destination, function callback, int(0..1)|void acknowledge, int(0..1)|void receipt)
+int subscribe(string destination, function callback, int(0..1)|void acknowledge, int(0..1)|void receipt, mapping|void headers)
 {
   string messageid;
   Frame f = Frame();
@@ -223,6 +223,7 @@ int subscribe(string destination, function callback, int(0..1)|void acknowledge,
 
   f->set_header("destination", destination);
 
+  if(headers) f->set_headers(headers);
 
   if(receipt)
   {
