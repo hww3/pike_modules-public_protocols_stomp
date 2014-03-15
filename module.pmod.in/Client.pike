@@ -32,7 +32,7 @@ void set_background()
 }
 
 //!
-void create(string|void _broker_url, int(0..1)|void _reconnect)
+void create(string|void _broker_url, int(0..1)|void _reconnect, mapping|void headers)
 {
   frame_handler = client_frame_handler;  
   
@@ -40,7 +40,7 @@ void create(string|void _broker_url, int(0..1)|void _reconnect)
   reconnect = _reconnect;
 
   if(broker_url)
-    connect(broker_url);
+    connect(broker_url, headers);
 }
 
 //!
@@ -57,7 +57,7 @@ string get_session()
 }
 
 //!
-static void connect(string broker_url)
+static void connect(string broker_url, mapping|void headers)
 {
   Standards.URI url;
   string host;
@@ -91,6 +91,8 @@ static void connect(string broker_url)
     f->set_header("login", user);
     f->set_header("passcode", pass);
   }
+
+  if(headers) f->set_headers(headers);
 
   f = send_frame_get_response(f);
 
@@ -206,10 +208,14 @@ int abort(string txid, int(0..1)|void receipt)
 //!    should we require recieved messages to be acknowledged?
 //!  @param receipt
 //!     should we await confirmation of this command from the server?
-int subscribe(string destination, function callback, int(0..1)|void acknowledge, int(0..1)|void receipt)
+//! @param headers
+//!     a list of headers we wish to include in the message
+int subscribe(string destination, function callback, int(0..1)|void acknowledge, int(0..1)|void receipt, mapping|void headers)
 {
   string messageid;
   Frame f = Frame();
+
+  if(headers) f->set_headers(headers);
 
   if(acknowledge)
   {
@@ -222,7 +228,6 @@ int subscribe(string destination, function callback, int(0..1)|void acknowledge,
   f->set_command("SUBSCRIBE");
 
   f->set_header("destination", destination);
-
 
   if(receipt)
   {
