@@ -292,6 +292,13 @@ int unsubscribe(string destination, int(0..1)|void receipt)
 //!     this message with.
 //!  @param receipt
 //!     should we await confirmation of this command from the server?
+//!
+//!  @note
+//!      to suppress the content-length header (which has special meaning
+//!      for some brokers), pass a "content-length" header with a value of
+//!      (int)-1. Note that if the content-length header is suppressed, you
+//!      must take care that no null bytes are contained within the message,
+//!      otherwise a broken frame will be generated.
 int send(string destination, string message, mapping|void headers, string|void txid, int(0..1)|void receipt)
 {
   string messageid;
