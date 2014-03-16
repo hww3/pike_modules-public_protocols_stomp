@@ -250,12 +250,10 @@ class Frame
   //!
   mixed cast(string type)
   {
-//werror("frame: %O\n\n", render_frame());
     if(type == "string")
       return render_frame();
     else
       error("Unknown cast type %s\n", type);
-
   }
 
   string render_frame()
@@ -264,20 +262,19 @@ class Frame
 
     f += command + "\n";
 
-    if(body) headers["content-length"] = (string)(sizeof(body));
-
-// werror("render_frame(): %O %O\n", headers, body);
+    if(body && headers["content-length"] == -1)
+      m_delete(headers, "content-length");
+    else if(body)
+      headers["content-length"] = (string)(sizeof(body));
 
     foreach(headers; string h; string v)
       f += string_to_utf8(h) + ":" + string_to_utf8(v) + "\n";
-
 
     f += "\n";
 
     f += string_to_utf8(body);
 
     f += "\000";
-
 
     return f;
   }  
